@@ -92,14 +92,23 @@ def run_dbt(command="build"):
     """
     # sources.yml and profiles.yml use relative paths (data/, nyc_taxi.duckdb),
     # so dbt must run from the project folder no matter where this script was launched.
-    os.chdir(PROJECT_DIR)
-    res = dbtRunner().invoke([command])
+    try:
+        os.chdir(PROJECT_DIR)
+        res = dbtRunner().invoke([command])
+    except Exception as e:
+        # dbt couldn't even start (bad install, missing project folder, etc.)
+        logging.exception(f"dbt {command} failed to start: {e}")
+        print(f"FAILED dbt {command}: {e}")
+        return False
 
     # res.success is False if any model/test failed; res.exception is set if dbt itself crashed
     if res.exception:
         logging.error(f"dbt {command} crashed: {res.exception}")
+        print(f"FAILED dbt {command}: {res.exception}")
+    # Log each node's status; failed models/tests get ERROR level so they stand out in load.log
     for r in res.result or []:
-        logging.info(f"dbt {r.node.name}: {r.status}")
+        level = {"error": logging.ERROR, "fail": logging.ERROR, "warn": logging.WARNING}.get(r.status, logging.INFO)
+        logging.log(level, f"dbt {r.node.name}: {r.status} {r.message or ''}".rstrip())
     logging.info(f"dbt {command} success={res.success}")
     return res.success
 

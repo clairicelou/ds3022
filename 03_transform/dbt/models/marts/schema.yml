@@ -294,3 +294,22 @@ models:
               arguments:
                 min_value: 0
                 max_value: 100
+
+  - name: mart_pickups_by_zone
+    description: >
+      Pickup (departure) count and share of all trips for every taxi zone
+      (265 rows, zero-filled). Plotted by plots/plot_pickups_by_zone.py.
+    columns:
+      - name: location_id
+        tests:
+          - unique
+          - not_null
+      - name: borough
+        tests:
+          - not_null
+      - name: trip_count
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
